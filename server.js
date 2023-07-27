@@ -70,7 +70,9 @@ function processRequest(req, res) {
         var remoteURL;
 
         try {
+            console.log(result)
             remoteURL = url.parse(decodeURI(result[1]));
+            console.log(remoteURL)
         }
         catch (e) {
             return sendInvalidURLResponse(res);
