@@ -71,7 +71,7 @@ function processRequest(req, res) {
 
         try {
             console.log(result[1])
-            remoteURL = url.parse(decodeURI(result[1]),true,true);
+            remoteURL = url.parse(decodeURI(result[1].replace('http:/', 'http://')),true,true);
             console.log(remoteURL)
         }
         catch (e) {
