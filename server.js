@@ -6,6 +6,8 @@ var request = require("request");
 var cluster = require("cluster");
 const axios = require("axios");
 const express = require("express");
+var util = require('util');
+var exec = require('child_process').exec;
 var throttle = require("tokenthrottle")({
   rate: config.max_requests_per_second,
 });
@@ -26,6 +28,20 @@ publicAddressFinder(function (err, data) {
 
 const getVesrionedTurl = (version) => {
   const turl = `https://jiotv.data.cdn.jio.com/apis/v${version}/getMobileChannelList/get/?langId=6&os=android&devicetype=phone&usertype=tvYR7NSNn7rymo3F&version=285`;
+
+const command = `curl -sL -w "%{http_code} %{time_total}\\n" "${turl}" -o /dev/null`
+
+child = exec(command, function(error, stdout, stderr){
+
+console.log('stdout: ' + stdout);
+console.log('stderr: ' + stderr);
+
+if(error !== null)
+{
+    console.log('exec error: ' + error);
+}
+
+});
   return turl;
 };
 
