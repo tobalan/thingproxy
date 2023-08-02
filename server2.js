@@ -4,12 +4,9 @@ var config = require("./config");
 var url = require("url");
 var request = require("request");
 var cluster = require("cluster");
-const axios = require("axios");
-const express = require("express");
 var throttle = require("tokenthrottle")({
   rate: config.max_requests_per_second,
 });
-const app = express();
 
 http.globalAgent.maxSockets = Infinity;
 https.globalAgent.maxSockets = Infinity;
@@ -22,66 +19,6 @@ publicAddressFinder(function (err, data) {
   if (!err && data) {
     publicIP = data.address;
   }
-});
-
-const getVesrionedTurl = (version) => {
-  const turl = `https://jiotv.data.cdn.jio.com/apis/v${version}/getMobileChannelList/get/?langId=6&os=android&devicetype=phone&usertype=tvYR7NSNn7rymo3F&version=285`;
-  return turl;
-};
-
-app.get("/1.3", (req, res) => {
-  const turl = getVesrionedTurl("1.3");
-  axios
-    .get(turl)
-    .then(function (response) {
-      // handle success
-      console.log(response?.data?.result?.length);
-      res.status(200).json(response.data).end();
-    })
-    .catch(function (error) {
-      // handle error
-      console.log(error);
-      res.status(500).send(error);
-    })
-    .finally(function () {
-      // always executed
-    });
-});
-app.get("/1.4", (req, res) => {
-  const turl = getVesrionedTurl("1.4");
-  axios
-    .get(turl)
-    .then(function (response) {
-      // handle success
-      console.log(response.data);
-      res.status(200).json(response.data).end();
-    })
-    .catch(function (error) {
-      // handle error
-      console.log(error);
-      res.status(500).send(error);
-    })
-    .finally(function () {
-      // always executed
-    });
-});
-app.get("/3.0", (req, res) => {
-  const turl = getVesrionedTurl("3.0");
-  axios
-    .get(turl)
-    .then(function (response) {
-      // handle success
-      console.log(response.data);
-      res.status(200).json(response.data).end();
-    })
-    .catch(function (error) {
-      // handle error
-      console.log(error);
-      res.status(500).send(error);
-    })
-    .finally(function () {
-      // always executed
-    });
 });
 
 function addCORSHeaders(req, res) {
@@ -138,7 +75,7 @@ function getClientAddress(req) {
   );
 }
 
-function processRequest2(req, res) {
+function processRequest(req, res) {
   addCORSHeaders(req, res);
 
   // Return options pre-flight requests right away
@@ -257,56 +194,41 @@ if (cluster.isMaster) {
     cluster.fork();
   }
 } else {
-  //   http
-  //     .createServer(function (req, res) {
-  //       // Process AWS health checks
-  //       if (req.url === "/health") {
-  //         return writeResponse(res, 200);
-  //       }
-  //       if (req.url === "/1.4") {
-  //         //return writeResponse(res, 200);
-  //         return getVesrionedTurl(res, "1.4");
-  //       }
-  //       if (req.url === "/3.0") {
-  //         return getVesrionedTurl(res, "3.0");
-  //       }
-  //       if (req.url === "/1.3") {
-  //         return getVesrionedTurl(res, "1.3");
-  //       }
+  http
+    .createServer(function (req, res) {
+      // Process AWS health checks
+      if (req.url === "/health") {
+        return writeResponse(res, 200);
+      }
 
-  //       var clientIP = getClientAddress(req);
+      var clientIP = getClientAddress(req);
 
-  //       req.clientIP = clientIP;
+      req.clientIP = clientIP;
 
-  //       // Log our request
-  //       if (config.enable_logging) {
-  //         console.log(
-  //           "%s %s %s",
-  //           new Date().toJSON(),
-  //           clientIP,
-  //           req.method,
-  //           req.url
-  //         );
-  //       }
+      // Log our request
+      if (config.enable_logging) {
+        console.log(
+          "%s %s %s",
+          new Date().toJSON(),
+          clientIP,
+          req.method,
+          req.url
+        );
+      }
 
-  //       if (config.enable_rate_limiting) {
-  //         throttle.rateLimit(clientIP, function (err, limited) {
-  //           if (limited) {
-  //             return writeResponse(res, 429, "enhance your calm");
-  //           }
+      if (config.enable_rate_limiting) {
+        throttle.rateLimit(clientIP, function (err, limited) {
+          if (limited) {
+            return writeResponse(res, 429, "enhance your calm");
+          }
 
-  //           processRequest(req, res);
-  //         });
-  //       } else {
-  //         processRequest(req, res);
-  //       }
-  //     })
-  //     .listen(config.port);
-  const port = process.env.PORT || 3000;
-
-  app.listen(port, () => {
-    console.log(`Example app listening at http://localhost:${port}`);
-  });
+          processRequest(req, res);
+        });
+      } else {
+        processRequest(req, res);
+      }
+    })
+    .listen(config.port);
 
   console.log(
     "thingproxy.freeboard.io process started (PID " + process.pid + ")"
